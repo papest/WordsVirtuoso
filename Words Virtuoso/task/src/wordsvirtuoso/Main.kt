@@ -11,9 +11,10 @@ fun String.answer(): String {
 }
 
 fun validWord(word: String, wordSize: Int = WORD_SIZE): Boolean {
-    val word = word.trim()
     val regex = ("\\b[a-z]{$wordSize}\\b").toRegex(RegexOption.IGNORE_CASE)
-    return (word.lowercase().toSet().size == wordSize) && regex.matches(word)
+    with(word.trim().lowercase()) {
+        return (toSet().size == wordSize) && regex.matches(this)
+    }
 }
 
 class FileChecks(file: File) {
@@ -59,7 +60,10 @@ fun dialog(args: Array<String>) {
 
 fun game(wordsCheck: FileChecks, candidateCheck: FileChecks) {
     val secret = candidateCheck.run { lines.toMutableList()[Random.nextInt(0, lines.size)] }
+    val start = System.currentTimeMillis()
+    val tries = mutableListOf<String>()
     var word = "Input a $WORD_SIZE-letter word:".answer().trim().lowercase()
+    val badChars = mutableSetOf<Char>()
     while (true) {
         when {
             word == "exit" -> {
@@ -67,7 +71,15 @@ fun game(wordsCheck: FileChecks, candidateCheck: FileChecks) {
                 break
             }
             word == secret -> {
+                val end = System.currentTimeMillis()
+                val duration = end - start
+                tries.add(word.uppercase())
+                println(tries.joinToString("\n"))
                 println("Correct!")
+                println(
+                    if (tries.size == 1) "Amazing luck! The solution was found at once." else "The solution was" +
+                            " found after ${tries.size} tries in $duration seconds."
+                )
                 break
             }
             word.length != WORD_SIZE -> println("The input isn't a $WORD_SIZE-letter word.")
@@ -76,12 +88,20 @@ fun game(wordsCheck: FileChecks, candidateCheck: FileChecks) {
             !wordsCheck.lines.contains(word) -> println("The input word isn't included in my words list.")
             else -> word.indices.map {
                 when {
-                    !secret.contains(word[it]) -> '_'
+                    !secret.contains(word[it]) -> {
+                        badChars.add(word[it])
+                        '_'
+                    }
                     word[it] == secret[it] -> word[it].uppercaseChar()
                     else -> word[it]
                 }
-            }.joinToString("").run { println(this) }
+            }.joinToString("").run {
+                tries.add(this)
+                println(tries.joinToString("\n"))
+                println(badChars.sorted().joinToString(""))
+            }
         }
+
         word = "Input a $WORD_SIZE-letter word:".answer().trim().lowercase()
     }
 }
