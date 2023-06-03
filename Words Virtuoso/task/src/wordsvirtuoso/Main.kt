@@ -11,7 +11,7 @@ fun String.answer(): String {
 }
 
 fun validWord(word: String, wordSize: Int = WORD_SIZE): Boolean {
-    val regex = ("\\b[a-z]{$wordSize}\\b").toRegex(RegexOption.IGNORE_CASE)
+    val regex = ("\\b[A-Z]{$wordSize}\\b").toRegex(RegexOption.IGNORE_CASE)
     with(word.trim().lowercase()) {
         return (toSet().size == wordSize) && regex.matches(this)
     }
@@ -59,22 +59,22 @@ fun dialog(args: Array<String>) {
 }
 
 fun game(wordsCheck: FileChecks, candidateCheck: FileChecks) {
-    val secret = candidateCheck.run { lines.toMutableList()[Random.nextInt(0, lines.size)] }
+    val secret = candidateCheck.run { lines.toMutableList()[Random.nextInt(0, lines.size)].uppercase() }
     val start = System.currentTimeMillis()
-    val tries = mutableListOf<String>()
-    var word = "Input a $WORD_SIZE-letter word:".answer().trim().lowercase()
+    val tries = mutableListOf<MutableList<Pair<Char, Color>>>()
+    var word = "Input a $WORD_SIZE-letter word:".answer().trim().uppercase()
     val badChars = mutableSetOf<Char>()
     while (true) {
         when {
-            word == "exit" -> {
+            word == "EXIT" -> {
                 println("The game is over.")
                 break
             }
             word == secret -> {
                 val end = System.currentTimeMillis()
                 val duration = end - start
-                tries.add(word.uppercase())
-                println(tries.joinToString("\n"))
+                tries.add(word.map { it to Color.GREEN }.toMutableList())
+                tries.forEach { printColorWord(it) }
                 println("Correct!")
                 println(
                     if (tries.size == 1) "Amazing luck! The solution was found at once." else "The solution was" +
@@ -83,27 +83,57 @@ fun game(wordsCheck: FileChecks, candidateCheck: FileChecks) {
                 break
             }
             word.length != WORD_SIZE -> println("The input isn't a $WORD_SIZE-letter word.")
-            !"[a-z]+".toRegex().matches(word) -> println("One or more letters of the input aren't valid.")
+            !"[A-Z]+".toRegex().matches(word) -> println("One or more letters of the input aren't valid.")
             word.toSet().size != WORD_SIZE -> println("The input has duplicate letters.")
-            !wordsCheck.lines.contains(word) -> println("The input word isn't included in my words list.")
+            !wordsCheck.lines.contains(word.lowercase()) -> println("The input word isn't included in my words list.")
             else -> word.indices.map {
                 when {
                     !secret.contains(word[it]) -> {
                         badChars.add(word[it])
-                        '_'
+                        word[it] to Color.GREY
                     }
-                    word[it] == secret[it] -> word[it].uppercaseChar()
-                    else -> word[it]
+                    word[it] == secret[it] -> word[it] to Color.GREEN
+                    else -> word[it] to Color.YELLOW
                 }
-            }.joinToString("").run {
+            }.toMutableList().run {
                 tries.add(this)
-                println(tries.joinToString("\n"))
-                println(badChars.sorted().joinToString(""))
+                tries.forEach { printColorWord(it) }
+                println()
+                with(badChars.sorted().joinToString("")) {
+                    println("${Color.AZURE.sequence}$this$RESET\n")
+                }
             }
         }
 
-        word = "Input a $WORD_SIZE-letter word:".answer().trim().lowercase()
+        word = "Input a $WORD_SIZE-letter word:".answer().trim().uppercase()
     }
+}
+
+fun printColorWord(word: MutableList<Pair<Char, Color>>) {
+//    var curWord = word
+//    while (curWord.isNotEmpty()) {
+//        val color = curWord.first().second
+//        curWord.takeWhile {
+//            color == it.second
+//        }.map { it.first }.joinToString("")
+//            .let {
+//            print("${color.sequence}$it$RESET")
+//        }
+//        curWord = curWord.dropWhile { it.second == color }.toMutableList()
+//    }
+    word.forEach {
+        print("${it.second.sequence}${it.first}$RESET")
+    }
+    println()
+}
+
+const val RESET = "\u001B[0m"
+
+enum class Color(val sequence: String) {
+    GREEN("\u001B[48:5:10m"),
+    YELLOW("\u001B[48:5:11m"),
+    GREY("\u001B[48:5:7m"),
+    AZURE("\u001B[48:5:14m")
 }
 
 fun main(args: Array<String>) {
